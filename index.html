@@ -194,9 +194,16 @@ function buildList(w){const p=num(st().people)||4,items={};
   const all=Object.values(items),ss=ST.stock[w.start]||{};
   const stock=all.filter(i=>inStock(i.name)).map(i=>({...i,state:ss[i.key]||null}));
   return {list:all.filter(i=>!inStock(i.name)||ss[i.key]==="buy"),stock,todo:stock.filter(i=>!i.state)};}
+const STOPW=new Set(["de","du","des","d","la","le","les","l","a","au","aux","en","et","ou","pour","avec","sans"]);
+const DESCR=/^(frais|epaisse|liquide|entiere?s?|ecremee?|nature|bio|crue?s?|cuite?s?|secs?|seches?|moulue?|rapee?|surgelee?s?|conserve|boite|deshydratee?s?|decortiquee?s?|denoyautee?s?|non|traitee?s?|gros|grosse|petite?s?|moyenne?|mure?s?|tranchee?s?|morceaux|fine?|extra|vierge|environ|fumee?s?|hachee?s?|egouttee?s?|pelee?s?|cubes?|lamelles?|rondelles?|saumonee?s?)$/;
+function driveTerm(name){const w=String(name).replace(/\(.*?\)/g," ").replace(/[,;:].*$/,"").replace(/[’']/g,"' ").split(/\s+/).filter(Boolean).slice(0,3);
+  while(w.length>1&&(DESCR.test(norm(w[w.length-1]))||STOPW.has(norm(w[w.length-1]).replace("'",""))))w.pop();
+  for(let i=1;i<w.length;i++)if(DESCR.test(norm(w[i]))){w.length=i;break;}
+  while(w.length>1&&STOPW.has(norm(w[w.length-1]).replace("'","")))w.pop();
+  return w.join(" ").replace(/' /g,"'").trim()||String(name);}
 const DRIVE_DEF="https://m-courses.leclercdrive.fr/magasin-097601-097601/recherche/Riz";
 function driveLink(name){const u=String(st().driveSearchUrl||"").trim()||DRIVE_DEF;if(!u)return null;
-  const term=String(name).replace(/\(.*?\)/g,"").replace(/\b(frais|fraîche|fraîches|crus?|cuites?|en conserve|en boîte|déshydratée?s?|décortiquée?s?|dénoyautée?s?)\b/gi,"").replace(/\s+/g," ").trim();
+  const term=driveTerm(name);
   try{const x=new URL(u);if(x.protocol!=="https:")return null;let done=false;x.searchParams.forEach((v,k)=>{if(!done&&norm(v)==="riz"){x.searchParams.set(k,term);done=true;}});if(done)return x.href;
     if(/riz/i.test(x.pathname)){x.pathname=x.pathname.replace(/riz/i,encodeURIComponent(term));return x.href;}return null;}catch(e){return null;}}
 
