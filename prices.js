@@ -55,7 +55,7 @@ const PRICE_RULES=[
  [/tomates? cerise/,7,15],[/tomate/,3,120],
  
  [/epinards? surgele/,3,0],[/epinard|pousses|roquette|mache|jeunes pousses|salade|laitue/,12,300,{feuille:10}],
- [/brocoli/,3,400],[/chou-fleur|chou fleur|bouquets de chou/,2.5,800],[/chou/,2,1000,{feuille:30}],
+ [/brocoli/,3,400],[/feuilles? de chou/,2.5,30],[/chou-fleur|chou fleur|bouquets de chou/,2.5,800],[/chou/,2,1000,{feuille:30}],
  [/celeri-rave|celeri rave/,2.5,800],[/celeri/,3,50,{branche:50}],
  [/potiron|potimarron|butternut|courge/,2.2,1200],
  [/petits pois surgel|petits pois/,3.5,0],[/haricots? verts? surgel/,3,0],[/haricot vert|haricots verts/,6,0],[/feve/,8,0],
