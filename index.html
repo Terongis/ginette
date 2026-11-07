@@ -94,6 +94,12 @@ textarea{min-height:120px}
 .donut{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.legend{flex:1;min-width:150px;display:flex;flex-direction:column;gap:6px}
 .lg{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:14px}.lg i{width:12px;height:12px;border-radius:4px;display:inline-block}.lg span{flex:1;white-space:nowrap}.lg em{font-style:normal;font-size:12px;color:#ffb74d}.lg s{text-decoration:none;color:#66bb6a}.lg .tiny{width:100%;padding-left:18px}
 .rrow.sugg{box-shadow:0 0 0 2px #ffd54f inset;background:rgba(255,213,79,.08)}.sgb{font-size:12px;font-weight:700;color:#ffd54f;margin-bottom:2px}
+.readycard{background:var(--card,#1b1e24);border-radius:18px;padding:12px 14px;margin:12px 0}
+.rdy{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #ffffff12}.rdy:first-of-type{border-top:0}
+.rthumb{width:46px;height:46px;border-radius:12px;overflow:hidden;background:#2a2e36;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}.rthumb img{width:100%;height:100%;object-fit:cover}
+.rdname{font-weight:700;font-size:14px;line-height:1.25}.rbar{height:7px;border-radius:5px;background:#ffffff1a;margin-top:6px;overflow:hidden}.rbar i{display:block;height:100%;background:linear-gradient(90deg,#ffb74d,#66bb6a);border-radius:5px;transition:width .3s}
+.rdst{text-align:center;font-weight:800;font-size:15px;min-width:54px}.rdst span{display:block;font-size:11px;font-weight:600;opacity:.7}.rdy.done .rdname{color:#81c784}.rdy.done .rbar i{background:#66bb6a}
+.drivebtn{white-space:nowrap;font-weight:700;font-size:13px;padding:8px 10px!important;border-radius:10px;background:#0a5bd3!important;color:#fff!important;text-decoration:none}
 </style>
 </head>
 <body>
@@ -188,7 +194,8 @@ function buildList(w){const p=num(st().people)||4,items={};
   const all=Object.values(items),ss=ST.stock[w.start]||{};
   const stock=all.filter(i=>inStock(i.name)).map(i=>({...i,state:ss[i.key]||null}));
   return {list:all.filter(i=>!inStock(i.name)||ss[i.key]==="buy"),stock,todo:stock.filter(i=>!i.state)};}
-function driveLink(name){const u=String(st().driveSearchUrl||"").trim();if(!u)return null;
+const DRIVE_DEF="https://m-courses.leclercdrive.fr/magasin-097601-097601/recherche/Riz";
+function driveLink(name){const u=String(st().driveSearchUrl||"").trim()||DRIVE_DEF;if(!u)return null;
   const term=String(name).replace(/\(.*?\)/g,"").replace(/\b(frais|fraîche|fraîches|crus?|cuites?|en conserve|en boîte|déshydratée?s?|décortiquée?s?|dénoyautée?s?)\b/gi,"").replace(/\s+/g," ").trim();
   try{const x=new URL(u);if(x.protocol!=="https:")return null;let done=false;x.searchParams.forEach((v,k)=>{if(!done&&norm(v)==="riz"){x.searchParams.set(k,term);done=true;}});if(done)return x.href;
     if(/riz/i.test(x.pathname)){x.pathname=x.pathname.replace(/riz/i,encodeURIComponent(term));return x.href;}return null;}catch(e){return null;}}
@@ -252,13 +259,19 @@ function vCourses(){const w=curWeek();if(!w)return `<div class="empty">Crée d'a
   const pk=picked(w);if(!pk.length)return `<div class="hero"><div class="htitle">Aucun repas choisi</div><div class="hsub">Choisis au moins une recette dans l'onglet Menus : la liste de courses se remplit toute seule.</div><div style="margin-top:12px"><a class="btn pri big" href="#semaine" style="display:block;text-align:center;text-decoration:none">📅 Choisir les repas</a></div></div>`;
   const {list,stock,todo}=buildList(w),ch=ST.checks[w.start]||{},left=list.filter(i=>!ch[i.key]).length;
   let h=`<div class="hero"><div class="row between"><div><div class="htitle">🛒 ${left} produit${left>1?"s":""} à acheter</div><div class="hsub">pour ${pk.length} repas · ${list.length-left} dans le panier</div></div><button class="btn sm" data-act="copy">📋 Copier</button></div>
-    <div class="chips" style="margin-top:8px">${pk.map(m=>{const r=recipe(m.pick),dd=parse(m.date);return `<span class="chip">${JOURS[dd.getDay()]} ${dd.getDate()} · ${esc(r.name)}</span>`;}).join("")}</div>
-    <div class="tiny muted" style="margin-top:8px">${st().driveSearchUrl?"Touche 🔎 pour trouver le produit sur Leclerc Drive, ajoute-le au panier, puis coche-le ici.":"Pour avoir un bouton Leclerc Drive sur chaque produit, renseigne le lien dans ⚙️ Réglages."}</div></div>`;
+    <div class="tiny muted" style="margin-top:8px">Touche <b>🛒 Drive</b> pour trouver le produit sur Leclerc Drive, ajoute-le au panier, puis coche-le ici.</div></div>`;
+  const ss=ST.stock[w.start]||{};
+  h+=`<section class="readycard"><div class="rayhead">🍽️ Recettes prêtes à cuisiner</div>`;
+  pk.forEach(m=>{const r=recipe(m.pick),dd=parse(m.date),seen=new Set();let tot=0,ok=0;
+    r.ingredients.forEach(ing=>{if(!ing.name)return;const k=keyOf(ing.name);if(seen.has(k))return;seen.add(k);tot++;if(ch[k]||(inStock(ing.name)&&ss[k]!=="buy"))ok++;});
+    const pct=tot?Math.round(ok/tot*100):100,done=ok>=tot;
+    h+=`<div class="rdy ${done?"done":""}">${thumbHTML(r,"rthumb")}<div class="grow"><div class="tiny muted">${JOURSL[dd.getDay()]} ${dd.getDate()}</div><div class="rdname">${esc(r.name)}</div><div class="rbar"><i style="width:${pct}%"></i></div></div><div class="rdst">${done?"✅<span>Prête</span>":`${ok}/${tot}<span>ingréd.</span>`}</div></div>`;});
+  h+=`</section>`;
   if(todo.length){h+=`<section class="stockcard"><div class="sthead">⚠️ À vérifier dans tes placards (${todo.length})</div><div class="tiny" style="margin-bottom:6px">Ces produits sont normalement en stock. Tu en as encore assez ?</div>`;
     todo.forEach(i=>{h+=`<div class="strow"><div class="grow"><b>${esc(i.name)}</b> <span class="small" style="opacity:.8">${esc(fmtQty(i.units))}</span></div><button class="btn sm" data-act="stock" data-k="${esc(i.key)}" data-v="have">✓ J'en ai</button><button class="btn sm warnbtn" data-act="stock" data-k="${esc(i.key)}" data-v="buy">🛒 Acheter</button></div>`;});h+=`</section>`;}
   RAYONS.forEach(ray=>{const its=list.filter(i=>i.rayon===ray);if(!its.length)return;its.sort((a,b)=>(ch[a.key]?1:0)-(ch[b.key]?1:0)||a.name.localeCompare(b.name,"fr"));
     h+=`<section class="raycard"><div class="rayhead">${RAYIC[ray]} ${esc(ray)} <span class="muted">${its.filter(i=>!ch[i.key]).length}</span></div>`;
-    its.forEach(i=>{const dl=driveLink(i.name);h+=`<label class="item ${ch[i.key]?"done":""}"><input type="checkbox" data-act="check" data-k="${esc(i.key)}" ${ch[i.key]?"checked":""}><div class="grow"><div class="iname">${esc(i.name)}</div><div class="iqty">${esc(fmtQty(i.units))||"selon la recette"}</div></div>${dl?`<a class="drivebtn" href="${esc(dl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔎</a>`:""}</label>`;});
+    its.forEach(i=>{const dl=driveLink(i.name);h+=`<label class="item ${ch[i.key]?"done":""}"><input type="checkbox" data-act="check" data-k="${esc(i.key)}" ${ch[i.key]?"checked":""}><div class="grow"><div class="iname">${esc(i.name)}</div><div class="iqty">${esc(fmtQty(i.units))||"selon la recette"}</div></div>${dl?`<a class="drivebtn" href="${esc(dl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🛒 Drive</a>`:""}</label>`;});
     h+=`</section>`;});
   const done=stock.filter(i=>i.state);
   if(done.length)h+=`<section class="raycard"><div class="rayhead">🏠 Placard vérifié</div>${done.map(i=>`<div class="strow"><div class="grow small">${esc(i.name)} · <span class="muted">${i.state==="have"?"j'en ai":"ajouté à la liste"}</span></div><button class="btn sm ghost" data-act="stock" data-k="${esc(i.key)}" data-v="">modifier</button></div>`).join("")}</section>`;
