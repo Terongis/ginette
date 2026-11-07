@@ -91,6 +91,9 @@ textarea{min-height:120px}
 .pick img,.pick .noimg{width:56px;height:48px;border-radius:8px;object-fit:cover;background:#2a323c;flex:none;display:flex;align-items:center;justify-content:center}
 #toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#2b333d;color:var(--text);padding:10px 14px;border-radius:12px;font-size:14px;z-index:30;display:none;max-width:90%;text-align:center}
 .empty{text-align:center;padding:24px 10px;color:var(--muted)}
+.donut{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.legend{flex:1;min-width:150px;display:flex;flex-direction:column;gap:6px}
+.lg{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:14px}.lg i{width:12px;height:12px;border-radius:4px;display:inline-block}.lg span{flex:1;white-space:nowrap}.lg em{font-style:normal;font-size:12px;color:#ffb74d}.lg s{text-decoration:none;color:#66bb6a}.lg .tiny{width:100%;padding-left:18px}
+.rrow.sugg{box-shadow:0 0 0 2px #ffd54f inset;background:rgba(255,213,79,.08)}.sgb{font-size:12px;font-weight:700;color:#ffd54f;margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -207,25 +210,43 @@ function vMenus(){const w=curWeek(),ws=weeks();
     <div class="progbar"><i style="width:${pk/w.days*100}%"></i></div><div class="small"><b>${pk}</b> soir${pk>1?"s":""} choisi${pk>1?"s":""} sur ${w.days}</div>
     <div class="row" style="margin-top:10px"><a class="btn pri grow" href="#courses" style="text-align:center;text-decoration:none">🛒 Courses${pk?` · ${list.length} produits`:""}</a><button class="btn" data-act="newweek">＋ Nouveaux</button></div>
     <button class="linkbtn" style="padding:10px 0 0" data-act="delweek" data-v="${esc(w.start)}">🗑️ Supprimer ces menus</button></div>`;
+  const sug=suggestions(w);
   if(!pk)h+=`<div class="tip">👉 Pour chaque soir, <b>touche la recette</b> qui te plaît (elle passe en vert). « Voir » ouvre la fiche Cookidoo. Un soir sans choix = pas de courses ce soir-là.</div>`;
-  else h+=balanceHTML(w);
+  h+=balanceHTML(w);
   w.meals.forEach((m,k)=>{const dd=parse(m.date),col=DAYC[k%DAYC.length],pr=m.pick&&recipe(m.pick);
     h+=`<section class="daycard" style="--dc:${col}"><div class="dayhead"><div class="dayname">${JOURSL[dd.getDay()]}<span>${dd.getDate()} ${MOIS[dd.getMonth()]}</span></div>${m.date===today()?`<span class="badge today">aujourd'hui</span>`:""}${pr?`<span class="badge ok">✓ choisi</span>`:`<span class="badge">à choisir</span>`}</div>`;
     const ids=[...m.options];if(m.pick&&!ids.includes(m.pick))ids.push(m.pick);
-    ids.forEach(id=>{const r=recipe(id);if(!r)return;const sel=m.pick===id;
-      h+=`<div class="rrow ${sel?"sel":""}" data-act="pick" data-k="${k}" data-id="${esc(id)}">${thumbHTML(r)}<div class="rbody"><div class="rname">${esc(r.name)}</div><div class="rmeta">${r.time!=null?`<span>⏱ ${esc(fmtMin(r.time))}</span>`:""}${tagsHTML(r)}<a href="${esc(r.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Voir ↗</a></div></div><div class="radio">${sel?"✓":""}</div></div>`;});
+    ids.forEach(id=>{const r=recipe(id);if(!r)return;const sel=m.pick===id,sg=sug[k]===id;
+      h+=`<div class="rrow ${sel?"sel":""} ${sg?"sugg":""}" data-act="pick" data-k="${k}" data-id="${esc(id)}">${thumbHTML(r)}<div class="rbody">${sg?`<div class="sgb">⭐ pour l'équilibre</div>`:""}<div class="rname">${esc(r.name)}</div><div class="rmeta">${r.time!=null?`<span>⏱ ${esc(fmtMin(r.time))}</span>`:""}${tagsHTML(r)}<a href="${esc(r.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Voir ↗</a></div></div><div class="radio">${sel?"✓":""}</div></div>`;});
     h+=`<button class="linkbtn" data-act="other" data-k="${k}">🔎 Choisir une autre recette</button></section>`;});
   return h;}
-function balanceHTML(w){const b=balance(w);if(!b.n)return "";
-  const it=(ok,label,val,hint)=>`<div class="balitem ${ok?"ok":"warn"}"><b>${val}</b> ${label}<div class="tiny muted">${hint}</div></div>`;
-  return `<div class="balance"><h3>🍏 Équilibre de tes choix</h3><div class="bal">
-    ${it(b.poisson>=Math.min(2,b.n),"poisson",b.poisson,"repère : 2 par semaine, dont 1 gras")}
-    ${it(b.viande<=3,"viande rouge / porc",b.viande,"à limiter (≈ 500 g/sem.)")}
-    ${it(b.charcut<=1,"charcuterie",b.charcut,"à limiter (≈ 150 g/sem.)")}
-    ${it(b.leg>=Math.min(2,b.n)||b.vege>=2,"légumineuses / végé",`${b.leg} / ${b.vege}`,"légumes secs : 2 fois/sem.")}
-    ${it(b.rich>=Math.ceil(b.n/2),"riches en légumes",`${b.rich}/${b.n}`,"des légumes à chaque repas")}
-    ${it(true,"volaille",b.volaille,"à privilégier vs viande rouge")}
-  </div><div class="tiny muted" style="margin-top:6px">Repères du Programme national nutrition santé (PNNS), donnés à titre indicatif.</div></div>`;}
+const OPT=[["poisson",2],["volaille",2],["vege",2],["viande",1]];
+function targets(n){const tot=OPT.reduce((a,x)=>a+x[1],0),t={},rem=[];let s=0;
+  OPT.forEach(([k,v])=>{const x=v*n/tot;t[k]=Math.floor(x);s+=t[k];rem.push([x-t[k],k]);});
+  rem.sort((a,b)=>b[0]-a[0]);for(let i=0;s<n;i++,s++)t[rem[i%rem.length][1]]++;t.charcut=0;return t;}
+function suggestions(w){const b=balance(w),t=targets(w.days),d={},out={};
+  Object.keys(CLS).forEach(k=>d[k]=(t[k]||0)-(b[k]||0));let needFat=b.gras<1;
+  w.meals.forEach((m,k)=>{if(m.pick)return;let best=null,bs=0;
+    m.options.forEach(id=>{const r=recipe(id);if(!r)return;const dk=d[r.cls]||0;if(dk<=0)return;
+      const sc=dk*10+(r.cls==="poisson"&&r.fat&&needFat?5:0)+(r.leg?2:0)+(rich(r)?1:0);if(sc>bs){bs=sc;best=r;}});
+    if(best){out[k]=best.id;d[best.cls]--;if(best.cls==="poisson"&&best.fat)needFat=false;}});
+  return out;}
+function balanceHTML(w){const b=balance(w),n=w.days,t=targets(n);
+  const R=62,C=2*Math.PI*R;let off=0,arcs="",got=0;
+  OPT.forEach(([k])=>{const tk=t[k];if(!tk)return;const seg=tk/n*C,f=Math.min(b[k],tk)/tk,col=CLS[k][2];got+=Math.min(b[k],tk);
+    arcs+=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${col}" stroke-opacity=".22" stroke-width="22" stroke-dasharray="${seg-3} ${C}" stroke-dashoffset="${-off}"/>`;
+    if(f>0)arcs+=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${col}" stroke-width="22" stroke-dasharray="${Math.max(seg*f-3,0)} ${C}" stroke-dashoffset="${-off}"/>`;
+    off+=seg;});
+  const score=Math.round(got/n*100);
+  const leg=OPT.filter(([k])=>t[k]).map(([k])=>{const c=CLS[k],x=b[k],tk=t[k],over=x-tk;
+    return `<div class="lg"><i style="background:${c[2]}"></i><span>${c[0]} ${c[1]}</span><b>${x}/${tk}</b>${over>0?`<em>+${over} en trop</em>`:x>=tk?`<s>✓</s>`:""}${k==="poisson"&&tk?`<div class="tiny muted">dont 1 poisson gras ${b.gras?"✓":"à prévoir"}</div>`:""}</div>`;}).join("")
+   +(b.charcut?`<div class="lg"><i style="background:${CLS.charcut[2]}"></i><span>🥓 Charcuterie</span><b>${b.charcut}</b><em>à limiter</em></div>`:"");
+  return `<div class="balance"><h3>🍏 Équilibre de tes menus</h3><div class="donut">
+    <svg viewBox="0 0 160 160" width="150" height="150"><g transform="rotate(-90 80 80)">${arcs}</g>
+    <text x="80" y="78" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">${score}%</text><text x="80" y="100" text-anchor="middle" font-size="12" fill="#aaa">équilibré</text></svg>
+    <div class="legend">${leg}</div></div>
+    <div class="tiny muted" style="margin-top:8px">Le camembert montre l'idéal pour ${n} soir${n>1?"s":""} : chaque part se remplit quand tu choisis. Les recettes marquées <b style="color:#ffd54f">⭐ pour l'équilibre</b> complètent ce qui manque.${b.n?` · 🥕 ${b.rich}/${b.n} riches en légumes · 🫘 ${b.leg} légumineuses`:""}</div>
+    <div class="tiny muted">Repères PNNS, à titre indicatif.</div></div>`;}
 
 function vCourses(){const w=curWeek();if(!w)return `<div class="empty">Crée d'abord des menus.</div>`;
   const pk=picked(w);if(!pk.length)return `<div class="hero"><div class="htitle">Aucun repas choisi</div><div class="hsub">Choisis au moins une recette dans l'onglet Menus : la liste de courses se remplit toute seule.</div><div style="margin-top:12px"><a class="btn pri big" href="#semaine" style="display:block;text-align:center;text-decoration:none">📅 Choisir les repas</a></div></div>`;
