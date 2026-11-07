@@ -35,7 +35,7 @@ nav a.on{color:var(--acc)}
 .nav-arrow{background:rgba(255,255,255,.08);border:0;color:var(--text);width:38px;height:38px;border-radius:50%;font-size:22px}
 .nav-arrow:disabled{opacity:.25}
 .progbar{height:8px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin:12px 0 4px}.progbar i{display:block;height:100%;background:var(--acc)}
-.linkbtn{background:none;border:0;color:var(--muted);font-size:13px;padding:8px 12px 12px;font-family:inherit;cursor:pointer}
+.mealbtns{display:flex;justify-content:space-between;flex-wrap:wrap}.linkbtn{background:none;border:0;color:var(--muted);font-size:13px;padding:8px 12px 12px;font-family:inherit;cursor:pointer}
 .tip{background:#16263a;color:#cfe3fb;border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:12px}
 .balance{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:12px}
 .balance h3{margin:0 0 8px;font-size:15px}
@@ -191,6 +191,20 @@ function generate(start,n){
     plan.forEach(cls=>{const r=pickFrom(cls,cls==="poisson"?(fishCount++%2===0):null);if(r){used.add(r.id);opts.push(r.id);}});
     meals.push({date:addDays(start,k),options:opts,pick:null});}
   return meals;}
+/* nouvelles propositions pour un soir : mêmes catégories, recettes jamais proposées dans ces menus */
+function regenMeal(w,k){const m=w.meals[k];
+  const pool=S.recipes.filter(r=>avoidOk(r)&&timeOk(r)&&r.ingredients.length),recent=recentIds(w.start);
+  m.seen=[...new Set([...(m.seen||[]),...m.options])];
+  const used=new Set(m.seen);w.meals.forEach((o,i)=>{if(i!==k){o.options.forEach(id=>used.add(id));if(o.pick)used.add(o.pick);}});
+  const classes=m.options.map(id=>recipe(id)&&recipe(id).cls).filter(Boolean);
+  const wts=r=>1+Math.min(3,r.veg/100)+(r.leg?1:0);
+  const draw=c=>{let tot=c.reduce((a,r)=>a+wts(r),0),x=Math.random()*tot;for(const r of c){x-=wts(r);if(x<=0)return r;}return c[c.length-1];};
+  const opts=[];(classes.length?classes:["viande","volaille","vege"]).forEach(cls=>{
+    let c=pool.filter(r=>r.cls===cls&&!used.has(r.id));if(!c.length)c=pool.filter(r=>!used.has(r.id));
+    const fresh=c.filter(r=>!recent.has(r.id));if(fresh.length)c=fresh;if(!c.length)return;
+    const r=draw(c);used.add(r.id);opts.push(r.id);});
+  if(!opts.length)return false;
+  m.options=opts;if(m.pick&&!opts.includes(m.pick))m.pick=null;return true;}
 function balance(w){const ps=picked(w).map(m=>recipe(m.pick));const n=ps.length;
   const c=k=>ps.filter(r=>r.cls===k).length;
   return {n,poisson:c("poisson"),gras:ps.filter(r=>r.cls==="poisson"&&r.fat).length,viande:c("viande"),charcut:c("charcut"),volaille:c("volaille"),vege:c("vege"),leg:ps.filter(r=>r.leg).length,rich:ps.filter(rich).length};}
@@ -244,7 +258,7 @@ function vMenus(){const w=curWeek(),ws=weeks();
     const ids=[...m.options];if(m.pick&&!ids.includes(m.pick))ids.push(m.pick);
     ids.forEach(id=>{const r=recipe(id);if(!r)return;const sel=m.pick===id,sg=sug[k]===id;
       h+=`<div class="rrow ${sel?"sel":""} ${sg?"sugg":""}" data-act="pick" data-k="${k}" data-id="${esc(id)}">${thumbHTML(r)}<div class="rbody">${sg?`<div class="sgb">⭐ pour l'équilibre</div>`:""}<div class="rname">${esc(r.name)}</div><div class="rmeta">${r.time!=null?`<span>⏱ ${esc(fmtMin(r.time))}</span>`:""}${tagsHTML(r)}<a href="${esc(r.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Voir ↗</a></div></div><div class="radio">${sel?"✓":""}</div></div>`;});
-    h+=`<button class="linkbtn" data-act="other" data-k="${k}">🔎 Choisir une autre recette</button></section>`;});
+    h+=`<div class="mealbtns"><button class="linkbtn" data-act="regen" data-k="${k}">🔄 3 autres recettes</button><button class="linkbtn" data-act="other" data-k="${k}">🔎 Choisir une recette</button></div></section>`;});
   return h;}
 const NUT={
  general:["🍏 Pourquoi cet équilibre ?","Ce sont les repères du <b>PNNS</b> (Programme national nutrition santé). L'idée : varier les protéines au fil de la semaine, privilégier poisson, volaille et légumes secs, limiter viande rouge et charcuterie, et des légumes à chaque repas. Pas besoin d'être parfait : c'est l'équilibre sur la semaine qui compte."],
@@ -326,7 +340,7 @@ document.addEventListener("change",e=>{const t=e.target;if(t.dataset&&t.dataset.
 document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if(!el||el.dataset.act==="check")return;const a=el.dataset.act,v=el.dataset.v;
   ({go:()=>{location.hash=v;},wk:()=>{if(v){setWeek(v);render();}},newweek:newWeekModal,delweek:()=>delWeekModal(v),
     pick:()=>{const w=curWeek(),m=w.meals[+el.dataset.k];m.pick=m.pick===el.dataset.id?null:el.dataset.id;save();render();},
-    other:()=>otherModal(+el.dataset.k),stock:()=>{const w=curWeek();(ST.stock[w.start]=ST.stock[w.start]||{})[el.dataset.k]=v||null;save();render();},
+    other:()=>otherModal(+el.dataset.k),regen:()=>{const w=curWeek();if(regenMeal(w,+el.dataset.k)){save();render();toast("3 nouvelles recettes proposées.");}else toast("Plus d'autres recettes disponibles.");},stock:()=>{const w=curWeek();(ST.stock[w.start]=ST.stock[w.start]||{})[el.dataset.k]=v||null;save();render();},
     copy:copyList,filt:()=>{S.filt=v;render();},savesettings:saveSettings,nut:()=>showNut(v),savestock:saveStock,close:closeModal}[a]||(()=>{}))();});
 
 function newWeekModal(){const def=addDays(today(),1);
