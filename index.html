@@ -101,6 +101,7 @@ textarea{min-height:120px}
 .rdst{text-align:center;font-weight:800;font-size:15px;min-width:54px}.rdst span{display:block;font-size:11px;font-weight:600;opacity:.7}.rdy.done .rdname{color:#81c784}.rdy.done .rbar i{background:#66bb6a}
 .drivebtn{white-space:nowrap;font-weight:700;font-size:13px;padding:8px 10px!important;border-radius:10px;background:#0a5bd3!important;color:#fff!important;text-decoration:none}
 .ic{width:1.15em;height:1.15em;vertical-align:-.22em;display:inline-block}.thumb .ic,.noimg .ic,.rthumb .ic{width:44%;height:44%;opacity:.85}
+.infob{background:#ffffff14;border:0;color:inherit;font-size:12px;padding:5px 10px;border-radius:12px;font-weight:600}.lg{cursor:pointer}.lg u{text-decoration:none;opacity:.55;font-size:12px}.infol{text-decoration:underline dotted;cursor:pointer}
 </style>
 </head>
 <body>
@@ -242,6 +243,15 @@ function vMenus(){const w=curWeek(),ws=weeks();
       h+=`<div class="rrow ${sel?"sel":""} ${sg?"sugg":""}" data-act="pick" data-k="${k}" data-id="${esc(id)}">${thumbHTML(r)}<div class="rbody">${sg?`<div class="sgb">⭐ pour l'équilibre</div>`:""}<div class="rname">${esc(r.name)}</div><div class="rmeta">${r.time!=null?`<span>⏱ ${esc(fmtMin(r.time))}</span>`:""}${tagsHTML(r)}<a href="${esc(r.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Voir ↗</a></div></div><div class="radio">${sel?"✓":""}</div></div>`;});
     h+=`<button class="linkbtn" data-act="other" data-k="${k}">🔎 Choisir une autre recette</button></section>`;});
   return h;}
+const NUT={
+ general:["🍏 Pourquoi cet équilibre ?","Ce sont les repères du <b>PNNS</b> (Programme national nutrition santé). L'idée : varier les protéines au fil de la semaine, privilégier poisson, volaille et légumes secs, limiter viande rouge et charcuterie, et des légumes à chaque repas. Pas besoin d'être parfait : c'est l'équilibre sur la semaine qui compte."],
+ poisson:["Poisson · 2 fois par semaine","Apporte des protéines, de l'iode et de la vitamine D. Le <b>poisson gras</b> (saumon, sardine, maquereau, truite, hareng) est riche en <b>oméga-3</b>, utiles au cœur et au développement du cerveau des enfants. D'où « dont 1 gras ». Varier les espèces limite l'exposition aux polluants."],
+ volaille:["Volaille · à privilégier","Protéines de qualité, peu grasses (surtout sans la peau). C'est la bonne alternative à la viande rouge pour en manger moins sans manquer de protéines."],
+ viande:["Viande rouge et porc · à limiter","Bonne source de <b>fer</b> et de vitamine B12, mais à ne pas dépasser <b>500 g par semaine</b> (cuite), soit 1 à 2 repas : au-delà, le risque de cancer colorectal augmente."],
+ charcut:["Charcuterie · à limiter","Riche en sel, en graisses et en nitrites. Classée cancérogène par le CIRC. Repère : <b>150 g maximum par semaine</b>. Le jambon blanc reste la moins grasse."],
+ vege:["Végétarien · légumes secs","Les <b>légumes secs</b> (lentilles, pois chiches, haricots) au moins 2 fois par semaine : fibres, protéines végétales, fer, et ils rassasient. Associés à une céréale (riz, semoule, pâtes), ils remplacent bien la viande. Les œufs et le fromage complètent."],
+ leg:["🥕 Légumes à chaque repas","Au moins <b>5 fruits et légumes par jour</b> : fibres, vitamines, minéraux. Une recette « riche en légumes » en apporte une bonne portion. Pour les enfants, les mixer en velouté ou les cacher dans un gratin marche bien."]};
+function showNut(k){const n=NUT[k]||NUT.general;openModal(`<h2>${n[0]}</h2><p style="line-height:1.5;margin:8px 0 14px">${n[1]}</p><button class="btn pri" style="width:100%" data-act="close">J'ai compris</button>`);}
 const OPT=[["poisson",2],["volaille",2],["vege",2],["viande",1]];
 function targets(n){const tot=OPT.reduce((a,x)=>a+x[1],0),t={},rem=[];let s=0;
   OPT.forEach(([k,v])=>{const x=v*n/tot;t[k]=Math.floor(x);s+=t[k];rem.push([x-t[k],k]);});
@@ -261,13 +271,13 @@ function balanceHTML(w){const b=balance(w),n=w.days,t=targets(n);
     off+=seg;});
   const score=Math.round(got/n*100);
   const leg=OPT.filter(([k])=>t[k]).map(([k])=>{const c=CLS[k],x=b[k],tk=t[k],over=x-tk;
-    return `<div class="lg"><i style="background:${c[2]}"></i><span>${c[0]} ${c[1]}</span><b>${x}/${tk}</b>${over>0?`<em>+${over} en trop</em>`:x>=tk?`<s>✓</s>`:""}${k==="poisson"&&tk?`<div class="tiny muted">dont 1 poisson gras ${b.gras?"✓":"à prévoir"}</div>`:""}</div>`;}).join("")
-   +(b.charcut?`<div class="lg"><i style="background:${CLS.charcut[2]}"></i><span>${ICO.charcut} Charcuterie</span><b>${b.charcut}</b><em>à limiter</em></div>`:"");
-  return `<div class="balance"><h3>🍏 Équilibre de tes menus</h3><div class="donut">
+    return `<div class="lg" data-act="nut" data-v="${k}"><i style="background:${c[2]}"></i><span>${c[0]} ${c[1]} <u>ⓘ</u></span><b>${x}/${tk}</b>${over>0?`<em>+${over} en trop</em>`:x>=tk?`<s>✓</s>`:""}${k==="poisson"&&tk?`<div class="tiny muted">dont 1 poisson gras ${b.gras?"✓":"à prévoir"}</div>`:""}</div>`;}).join("")
+   +(b.charcut?`<div class="lg" data-act="nut" data-v="charcut"><i style="background:${CLS.charcut[2]}"></i><span>${ICO.charcut} Charcuterie <u>ⓘ</u></span><b>${b.charcut}</b><em>à limiter</em></div>`:"");
+  return `<div class="balance"><h3 class="row between">🍏 Équilibre de tes menus <button class="infob" data-act="nut" data-v="general">ⓘ Pourquoi ?</button></h3><div class="donut">
     <svg viewBox="0 0 160 160" width="150" height="150"><g transform="rotate(-90 80 80)">${arcs}</g>
     <text x="80" y="78" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">${score}%</text><text x="80" y="100" text-anchor="middle" font-size="12" fill="#aaa">équilibré</text></svg>
     <div class="legend">${leg}</div></div>
-    <div class="tiny muted" style="margin-top:8px">Le camembert montre l'idéal pour ${n} soir${n>1?"s":""} : chaque part se remplit quand tu choisis. Les recettes marquées <b style="color:#ffd54f">⭐ pour l'équilibre</b> complètent ce qui manque.${b.n?` · 🥕 ${b.rich}/${b.n} riches en légumes · 🫘 ${b.leg} légumineuses`:""}</div>
+    <div class="tiny muted" style="margin-top:8px">Le camembert montre l'idéal pour ${n} soir${n>1?"s":""} : chaque part se remplit quand tu choisis. Les recettes marquées <b style="color:#ffd54f">⭐ pour l'équilibre</b> complètent ce qui manque.${b.n?` · <span class="infol" data-act="nut" data-v="leg">🥕 ${b.rich}/${b.n} riches en légumes ⓘ</span> · <span class="infol" data-act="nut" data-v="vege">🫘 ${b.leg} légumineuses ⓘ</span>`:""}</div>
     <div class="tiny muted">Repères PNNS, à titre indicatif.</div></div>`;}
 
 function vCourses(){const w=curWeek();if(!w)return `<div class="empty">Crée d'abord des menus.</div>`;
@@ -314,7 +324,7 @@ document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if
   ({go:()=>{location.hash=v;},wk:()=>{if(v){S.weekSel=v;render();}},newweek:newWeekModal,delweek:()=>delWeekModal(v),
     pick:()=>{const w=curWeek(),m=w.meals[+el.dataset.k];m.pick=m.pick===el.dataset.id?null:el.dataset.id;save();render();},
     other:()=>otherModal(+el.dataset.k),stock:()=>{const w=curWeek();(ST.stock[w.start]=ST.stock[w.start]||{})[el.dataset.k]=v||null;save();render();},
-    copy:copyList,filt:()=>{S.filt=v;render();},savesettings:saveSettings,savestock:saveStock,close:closeModal}[a]||(()=>{}))();});
+    copy:copyList,filt:()=>{S.filt=v;render();},savesettings:saveSettings,nut:()=>showNut(v),savestock:saveStock,close:closeModal}[a]||(()=>{}))();});
 
 function newWeekModal(){const def=addDays(today(),1);
   openModal(`<h2>Nouveaux menus</h2><div class="grid2"><div><label class="f">Premier soir</label><input type="date" id="nw_date" value="${def}"></div><div><label class="f">Nombre de soirs</label><select id="nw_n">${[2,3,4,5,6,7,8,9,10].map(n=>`<option ${n===7?"selected":""}>${n}</option>`).join("")}</select></div></div>
@@ -338,8 +348,13 @@ function copyList(){const w=curWeek();const {list}=buildList(w),ch=ST.checks[w.s
   RAYONS.forEach(r=>{const its=list.filter(i=>i.rayon===r&&!ch[i.key]);if(!its.length)return;t+=`\n${r}\n`+its.map(i=>`- ${i.name}${fmtQty(i.units)?" : "+fmtQty(i.units):""}`).join("\n")+"\n";});
   if(navigator.share){navigator.share({text:t}).catch(()=>{});return;}
   navigator.clipboard&&navigator.clipboard.writeText(t).then(()=>toast("Liste copiée."),()=>toast("Copie impossible."));}
-function saveSettings(){const s=st();s.prepMax=Math.max(10,num($("#s_time").value)||60);s.people=Math.max(1,num($("#s_people").value)||4);s.avoid=$("#s_avoid").value.split(",").map(x=>x.trim()).filter(Boolean);s.noRepeatWeeks=Math.max(0,num($("#s_norep").value));s.driveSearchUrl=$("#s_drive").value.trim();save();toast("Réglages enregistrés.");}
-function saveStock(){st().stock=$("#s_stock").value.split("\n").map(x=>x.trim()).filter(Boolean);save();toast("Liste enregistrée.");}
+function saveSettings(quiet){const s=st(),g=id=>$("#"+id);
+  if(g("s_time"))s.prepMax=Math.max(10,num(g("s_time").value)||60);if(g("s_people"))s.people=Math.max(1,num(g("s_people").value)||4);
+  if(g("s_avoid"))s.avoid=g("s_avoid").value.split(",").map(x=>x.trim()).filter(Boolean);if(g("s_norep"))s.noRepeatWeeks=Math.max(0,num(g("s_norep").value));
+  if(g("s_drive"))s.driveSearchUrl=g("s_drive").value.trim();if(g("s_stock"))s.stock=g("s_stock").value.split("\n").map(x=>x.trim()).filter(Boolean);
+  save();if(quiet!==true)toast("Réglages enregistrés ✓");}
+function saveStock(){saveSettings();}
+document.addEventListener("change",e=>{if(S.view==="reglages"&&e.target&&/^s_/.test(e.target.id||""))saveSettings(true);});
 
 /* ---------- démarrage ---------- */
 async function boot(){readHash();renderNav();
