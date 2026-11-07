@@ -361,7 +361,9 @@ async function boot(){readHash();renderNav();
   try{const r=await fetch("recipes.json",{cache:"no-cache"});const d=await r.json();S.poolDate=d.date;S.recipes=d.recipes.map(normRec);S.recipes.sort((a,b)=>a.name.localeCompare(b.name,"fr"));S.recipes.forEach(r=>S.byId[r.id]=r);}
   catch(e){$("#main").innerHTML=`<div class="empty">Impossible de charger les recettes. Vérifie ta connexion puis rouvre l'appli.</div>`;return;}
   render();
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});}
+  if("serviceWorker" in navigator){const had=!!navigator.serviceWorker.controller;let rl=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&!rl){rl=true;location.reload();}});
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{r.update();document.addEventListener("visibilitychange",()=>{if(!document.hidden)r.update();});}).catch(()=>{});}}
 boot();
 </script>
 </body>
