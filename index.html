@@ -100,6 +100,7 @@ textarea{min-height:120px}
 .rdname{font-weight:700;font-size:14px;line-height:1.25}.rbar{height:7px;border-radius:5px;background:#ffffff1a;margin-top:6px;overflow:hidden}.rbar i{display:block;height:100%;background:linear-gradient(90deg,#ffb74d,#66bb6a);border-radius:5px;transition:width .3s}
 .rdst{text-align:center;font-weight:800;font-size:15px;min-width:54px}.rdst span{display:block;font-size:11px;font-weight:600;opacity:.7}.rdy.done .rdname{color:#81c784}.rdy.done .rbar i{background:#66bb6a}
 .drivebtn{white-space:nowrap;font-weight:700;font-size:13px;padding:8px 10px!important;border-radius:10px;background:#0a5bd3!important;color:#fff!important;text-decoration:none}
+.ic{width:1.15em;height:1.15em;vertical-align:-.22em;display:inline-block}.thumb .ic,.noimg .ic,.rthumb .ic{width:44%;height:44%;opacity:.85}
 </style>
 </head>
 <body>
@@ -130,7 +131,14 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const RAYONS=["Fruits et légumes","Boucherie / Poisson","Crèmerie / Frais","Épicerie salée","Épicerie sucrée","Surgelés","Boulangerie","Boissons","Autres"];
 const RAYIC={"Fruits et légumes":"🥕","Boucherie / Poisson":"🥩","Crèmerie / Frais":"🧀","Épicerie salée":"🥫","Épicerie sucrée":"🍯","Surgelés":"🧊","Boulangerie":"🥖","Boissons":"🍷","Autres":"🛍️"};
 const DAYC=["#ff8a65","#ffd54f","#81c784","#4fc3f7","#9575cd","#f06292","#4db6ac","#aed581","#ffb74d","#7986cb"];
-const CLS={poisson:["🐟","Poisson","#0288d1"],volaille:["🍗","Volaille","#ef6c00"],viande:["🥩","Viande","#c62828"],charcut:["🥓","Charcuterie","#ad1457"],vege:["🥦","Végétarien","#2e7d32"]};
+const IC=(d)=>`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICO={
+ poisson:IC('<path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6Z"/><path d="M18 12v.5"/><path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1.17 1.94-.99 3.69 0 5.5-.99 1.81-1.17 3.56 0 5.5C5.58 16.03 7 14 7 11.33"/>'),
+ volaille:IC('<path d="M15.4 15.63a7.875 6 135 1 1 6.23-6.23 4.5 3.43 135 0 0-6.23 6.23"/><path d="m8.29 12.71-2.6 2.6a2.5 2.5 0 1 0-1.65 4.65A2.5 2.5 0 1 0 8.7 18.3l2.59-2.59"/>'),
+ viande:IC('<circle cx="12.5" cy="8.5" r="2.5"/><path d="M12.5 2a6.5 6.5 0 0 0-6.22 4.6c-1.1 3.13-.78 3.9-3.18 6.08A3 3 0 0 0 5 18c4 0 8.4-1.8 11.4-4.3A6.5 6.5 0 0 0 12.5 2Z"/><path d="m18.5 6 2.19 4.5a6.48 6.48 0 0 1 .31 2 6.49 6.49 0 0 1-2.6 5.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5"/>'),
+ charcut:IC('<path d="M13.144 21.144A7.274 10.445 45 1 0 2.856 10.856"/><path d="M13.144 21.144A7.274 4.365 45 0 0 2.856 10.856a7.274 4.365 45 0 0 10.288 10.288"/><path d="M16.565 10.435 18.6 8.4a2.501 2.501 0 1 0 1.65-4.65 2.5 2.5 0 1 0-4.66 1.66l-2.024 2.025"/><path d="m8.5 16.5-1-1"/>'),
+ vege:IC('<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>')};
+const CLS={poisson:[ICO.poisson,"Poisson","#0288d1"],volaille:[ICO.volaille,"Volaille","#ef6c00"],viande:[ICO.viande,"Viande","#c62828"],charcut:[ICO.charcut,"Charcuterie","#ad1457"],vege:[ICO.vege,"Végétarien","#2e7d32"]};
 const DEF={people:4,prepMax:60,avoid:["aubergine","kiwi"],noRepeatWeeks:3,driveSearchUrl:"",stock:["eau","sel","poivre","huile d'olive","huile de tournesol","vinaigre","farine","sucre","levure chimique","bouillon cube"]};
 
 /* ---------- état local ---------- */
@@ -254,7 +262,7 @@ function balanceHTML(w){const b=balance(w),n=w.days,t=targets(n);
   const score=Math.round(got/n*100);
   const leg=OPT.filter(([k])=>t[k]).map(([k])=>{const c=CLS[k],x=b[k],tk=t[k],over=x-tk;
     return `<div class="lg"><i style="background:${c[2]}"></i><span>${c[0]} ${c[1]}</span><b>${x}/${tk}</b>${over>0?`<em>+${over} en trop</em>`:x>=tk?`<s>✓</s>`:""}${k==="poisson"&&tk?`<div class="tiny muted">dont 1 poisson gras ${b.gras?"✓":"à prévoir"}</div>`:""}</div>`;}).join("")
-   +(b.charcut?`<div class="lg"><i style="background:${CLS.charcut[2]}"></i><span>🥓 Charcuterie</span><b>${b.charcut}</b><em>à limiter</em></div>`:"");
+   +(b.charcut?`<div class="lg"><i style="background:${CLS.charcut[2]}"></i><span>${ICO.charcut} Charcuterie</span><b>${b.charcut}</b><em>à limiter</em></div>`:"");
   return `<div class="balance"><h3>🍏 Équilibre de tes menus</h3><div class="donut">
     <svg viewBox="0 0 160 160" width="150" height="150"><g transform="rotate(-90 80 80)">${arcs}</g>
     <text x="80" y="78" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">${score}%</text><text x="80" y="100" text-anchor="middle" font-size="12" fill="#aaa">équilibré</text></svg>
