@@ -15,7 +15,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 header{position:sticky;top:0;z-index:5;background:rgba(16,19,23,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
-header h1{font-size:18px;margin:0;font-weight:800}
+header h1{font-size:18px;margin:0;font-weight:800}.brand{display:flex;align-items:center;gap:10px}.brand img{width:36px;height:36px;border-radius:50%;display:block}
 header button{background:none;border:0;color:var(--muted);font-size:22px;padding:4px 6px}
 main{max-width:640px;margin:0 auto;padding:12px 12px calc(90px + env(safe-area-inset-bottom))}
 nav{position:fixed;bottom:0;left:0;right:0;z-index:5;background:#0c0f12;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
@@ -105,7 +105,7 @@ textarea{min-height:120px}
 </style>
 </head>
 <body>
-<header><h1 id="htitle">Ginette</h1><button data-act="go" data-v="reglages" aria-label="Réglages">⚙️</button></header>
+<header><div class="brand"><img src="icon-192.png" alt=""><h1 id="htitle">Ginette</h1></div><button data-act="go" data-v="reglages" aria-label="Réglages">⚙️</button></header>
 <main id="main"><div class="empty">Chargement…</div></main>
 <nav id="nav"></nav>
 <div id="modal"><div id="sheet"></div></div>
@@ -144,10 +144,13 @@ const DEF={people:4,prepMax:60,avoid:["aubergine","kiwi"],noRepeatWeeks:3,driveS
 
 /* ---------- état local ---------- */
 const LS="mc_state_v1";
-let ST={settings:{...DEF},weeks:{},checks:{},stock:{},used:{}};
+let ST={settings:{...DEF},weeks:{},checks:{},stock:{},used:{},ui:{}};
 try{const o=JSON.parse(localStorage.getItem(LS)||"null");if(o)ST={...ST,...o,settings:{...DEF,...(o.settings||{})}};}catch(e){}
 const save=()=>{try{localStorage.setItem(LS,JSON.stringify(ST));}catch(e){toast("Impossible d'enregistrer sur ce téléphone.");}};
-const S={recipes:[],byId:{},view:"semaine",weekSel:null,q:"",filt:""};
+ST.ui=ST.ui||{};
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+const S={recipes:[],byId:{},view:"semaine",weekSel:ST.ui.weekSel||null,q:"",filt:""};
+const setWeek=v=>{S.weekSel=v;ST.ui.weekSel=v;save();};
 const st=()=>ST.settings;
 
 function toast(m){const t=$("#toast");t.textContent=m;t.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display="none",3000);}
@@ -219,8 +222,8 @@ function driveLink(name){const u=String(st().driveSearchUrl||"").trim()||DRIVE_D
 /* ---------- rendu ---------- */
 const TABS=[["semaine","📅","Menus"],["courses","🛒","Courses"],["recettes","📖","Recettes"]];
 function renderNav(){$("#nav").innerHTML=TABS.map(([v,i,l])=>`<a href="#${v}" class="${S.view===v?"on":""}"><span>${i}</span>${l}</a>`).join("");}
-function readHash(){const h=location.hash.replace("#","");S.view=["semaine","courses","recettes","reglages"].includes(h)?h:"semaine";}
-window.addEventListener("hashchange",()=>{readHash();renderNav();render();try{scrollTo(0,0);}catch(e){}});
+function readHash(){let h=location.hash.replace("#","");if(!h&&ST.ui.view)h=ST.ui.view;S.view=["semaine","courses","recettes","reglages"].includes(h)?h:"semaine";}
+window.addEventListener("hashchange",()=>{readHash();ST.ui.view=S.view;save();renderNav();render();try{scrollTo(0,0);}catch(e){}});
 function render(){$("#htitle").textContent=({semaine:"Menus",courses:"Courses",recettes:"Recettes",reglages:"Réglages"})[S.view];
   $("#main").innerHTML=({semaine:vMenus,courses:vCourses,recettes:vRecettes,reglages:vReglages}[S.view])();if(S.view==="recettes")renderRecList();}
 
@@ -321,7 +324,7 @@ function vReglages(){const s=st();return `<div class="card"><h2>Menus</h2>
 document.addEventListener("input",e=>{if(e.target.id==="rq"){S.q=e.target.value;renderRecList();}});
 document.addEventListener("change",e=>{const t=e.target;if(t.dataset&&t.dataset.act==="check"){const w=curWeek();if(!w)return;(ST.checks[w.start]=ST.checks[w.start]||{})[t.dataset.k]=t.checked;save();render();}});
 document.addEventListener("click",e=>{const el=e.target.closest("[data-act]");if(!el||el.dataset.act==="check")return;const a=el.dataset.act,v=el.dataset.v;
-  ({go:()=>{location.hash=v;},wk:()=>{if(v){S.weekSel=v;render();}},newweek:newWeekModal,delweek:()=>delWeekModal(v),
+  ({go:()=>{location.hash=v;},wk:()=>{if(v){setWeek(v);render();}},newweek:newWeekModal,delweek:()=>delWeekModal(v),
     pick:()=>{const w=curWeek(),m=w.meals[+el.dataset.k];m.pick=m.pick===el.dataset.id?null:el.dataset.id;save();render();},
     other:()=>otherModal(+el.dataset.k),stock:()=>{const w=curWeek();(ST.stock[w.start]=ST.stock[w.start]||{})[el.dataset.k]=v||null;save();render();},
     copy:copyList,filt:()=>{S.filt=v;render();},savesettings:saveSettings,nut:()=>showNut(v),savestock:saveStock,close:closeModal}[a]||(()=>{}))();});
@@ -333,10 +336,10 @@ function newWeekModal(){const def=addDays(today(),1);
   <button class="btn pri big" id="nw_go">✨ Proposer les menus</button><button class="btn ghost big" data-act="close" style="margin-top:6px">Annuler</button>`);
   $("#nw_go").onclick=()=>{const start=$("#nw_date").value,n=num($("#nw_n").value)||7;if(!start)return;
     if(ST.weeks[start]&&!$("#nw_go").dataset.confirm){$("#nw_go").dataset.confirm=1;$("#nw_msg").textContent="Des menus commencent déjà ce jour-là. Touche à nouveau pour les remplacer.";return;}
-    ST.weeks[start]={start,days:n,meals:generate(start,n),created:new Date().toISOString()};delete ST.checks[start];delete ST.stock[start];save();S.weekSel=start;closeModal();location.hash="semaine";render();toast("Menus proposés !");};}
+    ST.weeks[start]={start,days:n,meals:generate(start,n),created:new Date().toISOString()};delete ST.checks[start];delete ST.stock[start];setWeek(start);closeModal();location.hash="semaine";render();toast("Menus proposés !");};}
 function delWeekModal(start){const w=ST.weeks[start];if(!w)return;
   openModal(`<h2>Supprimer ces menus ?</h2><p class="muted">Du ${esc(fmtD(start))} au ${esc(fmtD(addDays(start,w.days-1)))}. Les choix et la liste de courses seront effacés.</p><div class="row"><button class="btn danger grow" id="dw_ok">🗑️ Supprimer</button><button class="btn grow" data-act="close">Annuler</button></div>`);
-  $("#dw_ok").onclick=()=>{delete ST.weeks[start];delete ST.checks[start];delete ST.stock[start];save();S.weekSel=null;closeModal();render();toast("Menus supprimés.");};}
+  $("#dw_ok").onclick=()=>{delete ST.weeks[start];delete ST.checks[start];delete ST.stock[start];setWeek(null);closeModal();render();toast("Menus supprimés.");};}
 function otherModal(k){const w=curWeek(),m=w.meals[k];let q="",f="";
   const draw=()=>{const nq=norm(q);const rs=S.recipes.filter(r=>avoidOk(r)&&timeOk(r)&&(!f||r.cls===f)&&(!nq||norm(r.name).includes(nq)||r.ingredients.some(i=>norm(i.name).includes(nq)))).slice(0,80);
     $("#om_list").innerHTML=rs.map(r=>`<div class="pick" data-id="${esc(r.id)}">${r.img?`<img src="${esc(r.img)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:`<div class="noimg">${CLS[r.cls][0]}</div>`}<div class="grow"><b>${esc(r.name)}</b><div class="tiny muted">${r.time!=null?"⏱ "+esc(fmtMin(r.time)):""} · ${CLS[r.cls][1]}</div></div></div>`).join("")||`<div class="muted small">Aucune recette.</div>`;};
